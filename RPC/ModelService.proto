@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package tensormarket;
+
+
+service ModelRunner {
+  rpc run(JsonMsg) returns (JsonMsg){}
+}
+
+message JsonMsg {
+  string msg = 1;
+}

@@ -1,0 +1,74 @@
+<html>
+   <body>
+
+      <form action = "http://localhost:5000/uploader" method = "POST"
+         enctype = "multipart/form-data">
+
+
+
+
+         <p>
+            <label>select model file: </label>
+            <input type = "file" name = "file" />
+         </p>
+
+         <p>
+            <label>username: </label>
+            <input type="text" name = "username" placeholder="separate labels with spaces"/>
+         </p>
+
+         <p>
+            <label>model_name: </label>
+            <input type="text" name = "model_name" placeholder="separate labels with spaces"/>
+         </p>
+
+
+
+         <p>
+            <label>Inputs</label>
+            <table>
+               <tr>
+                  <th>label</th>
+                  <th>width</th>
+                  <th>height</th>
+                  <th>datatype</th>
+                  <th>desc</th>
+               </tr>
+
+               <tr>
+                  <td><input type="text" name="label" placeholder="name your input"/></td>
+                  <td><input type="number" name="width" placeholder="width"/></td>
+                  <td><input type="number" name="height" placeholder="height"/></td>
+                  <td><input type="text" name="datatype" placeholder="height"/></td>
+                  <td><input type="text" name="desc" placeholder="describe your input"/></td>
+               </tr>
+
+            </table>
+         </p>
+
+         <p>
+            <label>Outputs</label>
+            <table>
+               <tr>
+                  <th>label</th>
+                  <th>width</th>
+                  <th>height</th>
+                  <th>datatype</th>
+                  <th>desc</th>
+               </tr>
+
+               <tr>
+                  <td><input type="text" name="label" placeholder="name your input"/></td>
+                  <td><input type="number" name="width" placeholder="width"/></td>
+                  <td><input type="number" name="height" placeholder="height"/></td>
+                  <td><input type="text" name="datatype" placeholder="height"/></td>
+                  <td><input type="text" name="desc" placeholder="describe your input"/></td>
+               </tr>
+            </table>
+         </p>
+
+         <input type = "submit"/>
+      </form>
+
+   </body>
+</html>
