@@ -1,3 +1,6 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
+
 from concurrent import futures
 import time
 import grpc
@@ -7,6 +10,8 @@ import ModelService_pb2_grpc
 
 from ModelRunnerFactory import ModelRunnerFactory
 
+from S3Client import S3Client
+
 import pymongo
 
 import base64
@@ -14,19 +19,21 @@ import numpy as np
 import json
 
 import sys
-import os
+
 import shutil
 import zipfile
 
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
+MODEL_DIR = "./model"
 
 class ModelRunnerService(ModelService_pb2_grpc.ModelRunnerServicer):
     def __init__(self, runner):
         self.runner = runner
 
     def run(self, request, context):
+        print "hit!!!"
         inputs = {}
         for input_label, input_data in json.loads(request.msg).iteritems():
             inputs[input_label] = [np.frombuffer(base64.decodestring(input_data), dtype=np.float32)]
@@ -40,27 +47,27 @@ class ModelRunnerService(ModelService_pb2_grpc.ModelRunnerServicer):
         return ModelService_pb2.JsonMsg(msg=result)
 
 
-def getCompressedModelFile(author, model_name, local_path = "./model"):
+def getCompressedModelFile(author, model_name, model_dir = MODEL_DIR):
     remote_path = "../models"
     remote_path = os.path.join(remote_path, author, model_name + '.zip')
 
-    if not os.path.isdir(local_path):
-        os.mkdir(local_path)
+    if not os.path.isdir(model_dir):
+        os.mkdir(model_dir)
 
-    local_path = os.path.join(local_path,  model_name + '.zip')
+    local_path = os.path.join(model_dir,  model_name + '.zip')
 
     shutil.copy(remote_path, local_path)
     return local_path
 
 
-def loadModelFile(author, model_name):
-    local_path = "./model"
-
-    # model files are stored as compressed zip file in remote file storage
-    zip_file_path = getCompressedModelFile(author, model_name)
+def unZipModelFile(zip_file_path):
+    """
+    :param zip_file_path: relative path of zip file
+    :return: nothing, extrace the file under MODEL_DIR
+    """
 
     zip_ref = zipfile.ZipFile(zip_file_path, 'r')
-    zip_ref.extractall(local_path)
+    zip_ref.extractall(MODEL_DIR)
     zip_ref.close()
 
 
@@ -71,8 +78,9 @@ def getModelRunner(author, model_name):
     model = models.find_one({"author": author, "name": model_name})
     client.close()
 
-    models_dir = "./model"
-    model_dir = os.path.join(models_dir, model['name'])
+    model_dir = MODEL_DIR
+    if os.path.isdir(os.path.join(model_dir, model["name"])):
+        model_dir = os.path.join(model_dir, model["name"])
 
     input_labels = map(lambda x: x["name"], model["input_tensors"])
     output_labels = map(lambda x: x["name"], model["output_tensors"])
@@ -83,7 +91,6 @@ def getModelRunner(author, model_name):
 
 
 def serve(author, model_name):
-    loadModelFile(author, model_name)
     getModelRunner(author, model_name)
     runner = getModelRunner(author, model_name)
 
@@ -99,5 +106,15 @@ def serve(author, model_name):
 
 
 if __name__ == '__main__':
-    author, model_name = sys.argv[1:]
+    if len(sys.argv) < 4:
+        author, model_name = sys.argv[1:]
+        zip_file_path = getCompressedModelFile(author, model_name)
+    else:
+        author, model_name, access_key_id, access_key = sys.argv[1:]
+        client = S3Client(access_key_id, access_key, work_dir=MODEL_DIR)
+        zip_file_path = client.downloadModel(author, model_name)
+    unZipModelFile(zip_file_path)
+
     serve(author, model_name)
+
+

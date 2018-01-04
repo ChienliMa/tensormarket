@@ -2,6 +2,9 @@ FROM ubuntu:16.04
 
 MAINTAINER Jeremiah Harmsen <jeremiah@google.com>
 
+# modified from google tensorflow serbing example
+MAINTAINER ChienliMa <maqianlie@gmail.com>
+
 RUN apt-get update && apt-get install -y \
         build-essential \
         curl \
@@ -27,17 +30,21 @@ RUN apt-get update && apt-get install -y \
     rm -rf /var/lib/apt/lists/*
 
 # Set up grpc
+RUN pip install mock grpcio
+RUN pip install mock grpcio-tools
 
-RUN pip install mock grpcio grpcio-tools
+# set up boto3
+RUN pip install mock boto
+RUN pip install mock boto3
 
-WORKDIR /
-RUN mkdir /bazel && \
-    cd /bazel && \
-    curl -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    curl -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
-    chmod +x bazel-*.sh && \
-    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    cd / && \
-    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
-CMD ["/bin/bash"]
+# setup running process
+WORKDIR /App
+RUN git clone https://github.com/ChienliMa/tensormarket.git
+
+WORKDIR tensormarket/RpcServer
+
+EXPOST 50051
+
+ENTRYPOINT ["python", "server.py", "author", "model_name", "access_key_id", "access_key"]
+
