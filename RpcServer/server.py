@@ -1,6 +1,3 @@
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
-
 from concurrent import futures
 import time
 import grpc
@@ -18,6 +15,7 @@ import base64
 import numpy as np
 import json
 
+import os
 import sys
 
 import shutil
@@ -71,13 +69,7 @@ def unZipModelFile(zip_file_path):
     zip_ref.close()
 
 
-def getModelRunner(author, model_name):
-    client = pymongo.MongoClient('localhost', 27017)
-    db = client.tensormarket
-    models = db.models
-    model = models.find_one({"author": author, "name": model_name})
-    client.close()
-
+def getModelRunner(model):
     model_dir = MODEL_DIR
     if os.path.isdir(os.path.join(model_dir, model["name"])):
         model_dir = os.path.join(model_dir, model["name"])
@@ -90,9 +82,9 @@ def getModelRunner(author, model_name):
     return runner
 
 
-def serve(author, model_name):
-    getModelRunner(author, model_name)
-    runner = getModelRunner(author, model_name)
+def serve(model):
+    getModelRunner(model)
+    runner = getModelRunner(model["author"], model["name"])
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     ModelService_pb2_grpc.add_ModelRunnerServicer_to_server(ModelRunnerService(runner), server)
@@ -105,16 +97,28 @@ def serve(author, model_name):
         server.stop(0)
 
 
+def getModelMeta(author, model_name, mongo_ip):
+    client = pymongo.MongoClient(mongo_ip, 27017)
+    db = client.tensormarket
+    models = db.models
+    model = models.find_one({"author": author, "name": model_name})
+    client.close()
+    return model
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 4:
+        mongo_ip = "localhost"
         author, model_name = sys.argv[1:]
         zip_file_path = getCompressedModelFile(author, model_name)
     else:
-        author, model_name, access_key_id, access_key = sys.argv[1:]
+        author, model_name, access_key_id, access_key, mongo_ip = sys.argv[1:]
         client = S3Client(access_key_id, access_key, work_dir=MODEL_DIR)
         zip_file_path = client.downloadModel(author, model_name)
+
     unZipModelFile(zip_file_path)
 
-    serve(author, model_name)
+    model = getModelMeta(author, model_name, mongo_ip)
+    serve(model)
 
 
